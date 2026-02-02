@@ -1,5 +1,5 @@
 blueprint:
-  name: Frigate - Telegram Notification Enhanced
+  name: Frigate - Telegram Notification
   description: Create automations to receive Snapshots and Clips from Frigate
   domain: automation
   input:
@@ -59,25 +59,18 @@ blueprint:
       selector:
         select:
           options:
-            - label: Disattivate
+            - label: Disabled
               value: disabled
-            - label: Solo fuori casa
+            - label: Away only
               value: away_only
-            - label: Solo di notte
+            - label: Night only
               value: night_only
-            - label: Solo di giorno
+            - label: Day only
               value: day_only
-            - label: Fuori casa + notte
+            - label: Away + Night
               value: away_and_night
-            - label: Sempre attive
+            - label: Always active
               value: always_active
-    manual_control:
-      name: (Optional) Manual Control Toggle (DEPRECATED)
-      description: This option is deprecated. Use Notification Mode instead. If set, it will override Notification Mode when OFF.
-      default: ''
-      selector:
-        entity:
-          domain: input_boolean
 mode: single
 max_exceeded: silent
 trigger:
@@ -103,7 +96,6 @@ variables:
   presence_entity: !input 'presence_filter'
   notification: !input 'notification'
   notification_mode: !input 'notification_mode'
-  manual_control_entity: !input 'manual_control'
   is_night: '{{ state_attr(''sun.sun'', ''elevation'') < 0 }}'
   is_home: '{{ presence_entity and is_state(presence_entity, ''home'') }}'
   emoji: >-
@@ -116,18 +108,17 @@ variables:
     {% endif %}
   object_label: >-
     {% if object == 'person' %}
-      Persona rilevata
+      Person detected
     {% elif object == 'car' %}
-      Auto rilevata
+      Car detected
     {% else %}
-      Movimento rilevato
+      Motion detected
     {% endif %}
 condition:
 - '{{ type != ''end'' }}'
 - '{{ not zone_only or entered_zones|length > 0 }}'
 - '{{ not zones|length or zones|select(''in'', entered_zones)|list|length > 0 }}'
 - '{{ not labels|length or object in labels }}'
-- '{{ not manual_control_entity or is_state(manual_control_entity, ''on'') }}'
 - >-
   {{
     notification_mode == 'always_active' or
@@ -167,7 +158,7 @@ action:
         disable_notification: '{{ notification }}'
         reply_to_message_id: '{{ first_message.chats[0].message_id }}'
         caption: |
-          📹 {{ camera_name }} - Registrazione Evento
+          📹 {{ camera_name }} - Event Recording
           🕐 {{ now().strftime('%H:%M:%S') }}
         url: >-
           {{base_url}}/api/frigate/notifications/{{id}}/{{camera}}/clip.mp4
