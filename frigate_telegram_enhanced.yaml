@@ -1,0 +1,174 @@
+blueprint:
+  name: Frigate - Telegram Notification Enanched
+  description: Create automations to receive Snapshots and Clips from Frigate
+  domain: automation
+  input:
+    camera:
+      name: Frigate Camera
+      description: The name of the camera as defined in your frigate configuration (/conf.yml).
+    target_chat:
+      name: Target
+      description: 'The chat_id to be used by the Telegram bot. 
+                !secret chat_id is not allowed on Blueprint, you will need the chat_id code.
+        '
+    notification:
+      name: Notification
+      description: 'Select "true" to disable notification, lave "false" to receive
+        notification.
+        '
+      selector:
+        select:
+          options:
+          - 'true'
+          - 'false'
+      default: 'false'
+    base_url:
+      name: (Optional) Base URL
+      description: The external url for your Home Assistant instance. This will default
+        to a relative URL and will open the clips in the app instead of the browser,
+        which may cause issues on some devices.
+      default: ''
+    zone_filter:
+      name: (Optional) Zone Filter
+      description: Only notify if object has entered a defined zone.
+      default: false
+      selector:
+        boolean: {}
+    zones:
+      name: (Optional) Trigger Zones
+      description: A list (-) of zones you wish to recieve notifications for.
+      default: []
+      selector:
+        object: {}
+    labels:
+      name: (Optional) Trigger Objects
+      description: A list (-) of objects you wish to recieve notifications for.
+      default: []
+      selector:
+        object: {}
+    presence_filter:
+      name: (Optional) Presence Filter
+      description: Only notify if selected presence entity is not "home".
+      default: ''
+      selector:
+        entity: {}
+    notification_mode:
+      name: Notification Mode
+      description: Select when to receive notifications
+      default: always_active
+      selector:
+        select:
+          options:
+            - label: Disattivate
+              value: disabled
+            - label: Solo fuori casa
+              value: away_only
+            - label: Solo di notte
+              value: night_only
+            - label: Solo di giorno
+              value: day_only
+            - label: Fuori casa + notte
+              value: away_and_night
+            - label: Sempre attive
+              value: always_active
+    manual_control:
+      name: (Optional) Manual Control Toggle (DEPRECATED)
+      description: This option is deprecated. Use Notification Mode instead. If set, it will override Notification Mode when OFF.
+      default: ''
+      selector:
+        entity:
+          domain: input_boolean
+mode: single
+max_exceeded: silent
+trigger:
+  platform: mqtt
+  topic: frigate/events
+  payload: !input 'camera'
+  value_template: '{{ value_json[''after''][''camera''] }}'
+variables:
+  id: '{{ trigger.payload_json[''after''][''id''] }}'
+  camera: '{{ trigger.payload_json[''after''][''camera''] }}'
+  camera_name: '{{ camera | replace(''_'', '' '') | title }}'
+  target_chat: !input 'target_chat'
+  object: '{{ trigger.payload_json[''after''][''label''] }}'
+  label: '{{ object | title }}'
+  entered_zones: '{{ trigger.payload_json[''after''][''entered_zones''] }}'
+  type: '{{ trigger.payload_json[''type''] }}'
+  base_url: !input 'base_url'
+  zone_only: !input 'zone_filter'
+  input_zones: !input 'zones'
+  zones: '{{ input_zones | list }}'
+  input_labels: !input 'labels'
+  labels: '{{ input_labels | list }}'
+  presence_entity: !input 'presence_filter'
+  notification: !input 'notification'
+  notification_mode: !input 'notification_mode'
+  manual_control_entity: !input 'manual_control'
+  is_night: '{{ state_attr(''sun.sun'', ''elevation'') < 0 }}'
+  is_home: '{{ presence_entity and is_state(presence_entity, ''home'') }}'
+  emoji: >-
+    {% if object == 'person' %}
+      👤
+    {% elif object == 'car' %}
+      🚗
+    {% else %}
+      🚨
+    {% endif %}
+  object_label: >-
+    {% if object == 'person' %}
+      Persona rilevata
+    {% elif object == 'car' %}
+      Auto rilevata
+    {% else %}
+      Movimento rilevato
+    {% endif %}
+condition:
+- '{{ type != ''end'' }}'
+- '{{ not zone_only or entered_zones|length > 0 }}'
+- '{{ not zones|length or zones|select(''in'', entered_zones)|list|length > 0 }}'
+- '{{ not labels|length or object in labels }}'
+- '{{ not manual_control_entity or is_state(manual_control_entity, ''on'') }}'
+- >-
+  {{
+    notification_mode == 'always_active' or
+    (notification_mode == 'disabled' and false) or
+    (notification_mode == 'away_only' and not is_home) or
+    (notification_mode == 'night_only' and is_night) or
+    (notification_mode == 'day_only' and not is_night) or
+    (notification_mode == 'away_and_night' and (not is_home or is_night))
+  }}
+action:
+- service: telegram_bot.send_photo
+  response_variable: first_message
+  data:
+    target: '{{ target_chat }}'
+    disable_notification: '{{ notification }}'
+    caption: |
+      {{ emoji }} {{ object_label }}
+      📹 {{ camera_name }}
+      🕐 {{ now().strftime('%H:%M:%S') }}
+    url: >-
+      {{base_url}}/api/frigate/notifications/{{id}}/snapshot.jpg?bbox=1
+- repeat:
+    sequence:
+    - wait_for_trigger:
+      - platform: mqtt
+        topic: frigate/events
+        payload: '{{ id }}'
+        value_template: '{{ value_json[''after''][''id''] }}'
+      timeout:
+        minutes: 2
+      continue_on_timeout: false
+    - condition: template
+      value_template: '{{ wait.trigger.payload_json[''type''] == ''end'' }}'
+    - service: telegram_bot.send_video
+      data:
+        target: '{{ target_chat }}'
+        disable_notification: '{{ notification }}'
+        reply_to_message_id: '{{ first_message.chats[0].message_id }}'
+        caption: |
+          📹 {{ camera_name }} - Registrazione Evento
+          🕐 {{ now().strftime('%H:%M:%S') }}
+        url: >-
+          {{base_url}}/api/frigate/notifications/{{id}}/{{camera}}/clip.mp4
+    until: '{{ wait.trigger.payload_json[''type''] == ''end'' }}'
