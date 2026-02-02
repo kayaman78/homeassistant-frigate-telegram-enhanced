@@ -30,7 +30,7 @@ Choose when to receive notifications:
 
 Use this URL:
 ```
-https://raw.githubusercontent.com/your-username/homeassistant-frigate-telegram/main/frigate_telegram_notification.yaml
+https://github.com/kayaman78/homeassistant-frigate-telegram-enhanced/blob/main/frigate_telegram_enhanced.yaml
 ```
 
 ### 2. Create Automation
