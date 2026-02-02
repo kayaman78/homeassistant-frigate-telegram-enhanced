@@ -1,5 +1,5 @@
 blueprint:
-  name: Frigate - Telegram Notification Enanched
+  name: Frigate - Telegram Notification Enhanced
   description: Create automations to receive Snapshots and Clips from Frigate
   domain: automation
   input:
