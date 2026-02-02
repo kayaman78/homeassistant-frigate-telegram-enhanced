@@ -48,10 +48,14 @@ blueprint:
         object: {}
     presence_filter:
       name: (Optional) Presence Filter
-      description: Only notify if selected presence entity is not "home".
-      default: ''
+      description: Select one or more person/device_tracker entities. Notifications will be sent only when ALL selected entities are away from home.
+      default: []
       selector:
-        entity: {}
+        entity:
+          multiple: true
+          filter:
+            - domain: person
+            - domain: device_tracker
     notification_mode:
       name: Notification Mode
       description: Select when to receive notifications
@@ -93,11 +97,16 @@ variables:
   zones: '{{ input_zones | list }}'
   input_labels: !input 'labels'
   labels: '{{ input_labels | list }}'
-  presence_entity: !input 'presence_filter'
+  presence_entities: !input 'presence_filter'
   notification: !input 'notification'
   notification_mode: !input 'notification_mode'
   is_night: '{{ state_attr(''sun.sun'', ''elevation'') < 0 }}'
-  is_home: '{{ presence_entity and is_state(presence_entity, ''home'') }}'
+  anyone_home: >-
+    {% if presence_entities | length == 0 %}
+      false
+    {% else %}
+      {{ presence_entities | select('is_state', 'home') | list | length > 0 }}
+    {% endif %}
   emoji: >-
     {% if object == 'person' %}
       👤
@@ -123,10 +132,10 @@ condition:
   {{
     notification_mode == 'always_active' or
     (notification_mode == 'disabled' and false) or
-    (notification_mode == 'away_only' and not is_home) or
+    (notification_mode == 'away_only' and not anyone_home) or
     (notification_mode == 'night_only' and is_night) or
     (notification_mode == 'day_only' and not is_night) or
-    (notification_mode == 'away_and_night' and (not is_home or is_night))
+    (notification_mode == 'away_and_night' and (not anyone_home or is_night))
   }}
 action:
 - service: telegram_bot.send_photo
