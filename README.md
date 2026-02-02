@@ -71,7 +71,7 @@ Required fields:
 ## Requirements
 
 - Home Assistant 2024+
-- Frigate 0.17+ integrated in Home Assistant
+- Frigate 0.16+ integrated in Home Assistant
 - Configured Telegram Bot
 - Active Frigate recording for bounding boxes
 
