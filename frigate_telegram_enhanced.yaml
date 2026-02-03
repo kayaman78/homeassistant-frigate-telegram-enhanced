@@ -1,5 +1,5 @@
 blueprint:
-  name: Frigate - Telegram Notification Enhanced
+  name: Frigate - Telegram Notification Enhanced v1.0
   description: Create automations to receive Snapshots and Clips from Frigate
   domain: automation
   input:
@@ -27,6 +27,10 @@ blueprint:
       description: The external url for your Home Assistant instance. This will default
         to a relative URL and will open the clips in the app instead of the browser,
         which may cause issues on some devices.
+      default: ''
+    frigate_url:
+      name: (Optional) Frigate URL
+      description: The external URL for your Frigate instance (e.g., https://frigate.yourdomain.com). If provided, adds a button to open Frigate camera view.
       default: ''
     zone_filter:
       name: (Optional) Zone Filter
@@ -73,8 +77,31 @@ blueprint:
               value: day_only
             - label: Away + Night
               value: away_and_night
+            - label: After hours
+              value: after_hours
             - label: Always active
               value: always_active
+    work_start_time:
+      name: (Optional) Work Start Time
+      description: Start time of business hours (used only with "After hours" mode). Format HH:MM
+      default: '07:00'
+    work_end_time:
+      name: (Optional) Work End Time
+      description: End time of business hours (used only with "After hours" mode). Format HH:MM
+      default: '19:00'
+    workday_sensor:
+      name: (Optional) Workday Sensor
+      description: Binary sensor for workday detection (used only with "After hours" mode). Create with workday integration.
+      default: ''
+      selector:
+        entity:
+          domain: binary_sensor
+    post_event_action:
+      name: (Optional) Post-Event Action
+      description: Optional actions to run when object is detected (e.g., turn on lights, trigger alarm, etc.). Leave empty for no action.
+      default: []
+      selector:
+        action: {}
 mode: single
 max_exceeded: silent
 trigger:
@@ -92,6 +119,7 @@ variables:
   entered_zones: '{{ trigger.payload_json[''after''][''entered_zones''] }}'
   type: '{{ trigger.payload_json[''type''] }}'
   base_url: !input 'base_url'
+  frigate_url: !input 'frigate_url'
   zone_only: !input 'zone_filter'
   input_zones: !input 'zones'
   zones: '{{ input_zones | list }}'
@@ -100,12 +128,23 @@ variables:
   presence_entities: !input 'presence_filter'
   notification: !input 'notification'
   notification_mode: !input 'notification_mode'
+  work_start: !input 'work_start_time'
+  work_end: !input 'work_end_time'
+  workday_entity: !input 'workday_sensor'
   is_night: '{{ state_attr(''sun.sun'', ''elevation'') < 0 }}'
   anyone_home: >-
     {% if presence_entities | length == 0 %}
       false
     {% else %}
       {{ presence_entities | select('is_state', 'home') | list | length > 0 }}
+    {% endif %}
+  current_time: '{{ now().strftime("%H:%M") }}'
+  is_workday: '{{ workday_entity and is_state(workday_entity, ''on'') }}'
+  is_business_hours: >-
+    {% if not workday_entity %}
+      false
+    {% else %}
+      {{ is_workday and work_start <= current_time < work_end }}
     {% endif %}
   emoji: >-
     {% if object == 'person' %}
@@ -135,7 +174,8 @@ condition:
     (notification_mode == 'away_only' and not anyone_home) or
     (notification_mode == 'night_only' and is_night) or
     (notification_mode == 'day_only' and not is_night) or
-    (notification_mode == 'away_and_night' and (not anyone_home or is_night))
+    (notification_mode == 'away_and_night' and (not anyone_home or is_night)) or
+    (notification_mode == 'after_hours' and not is_business_hours)
   }}
 action:
 - service: telegram_bot.send_photo
@@ -149,6 +189,17 @@ action:
       🕐 {{ now().strftime('%H:%M:%S') }}
     url: >-
       {{base_url}}/api/frigate/notifications/{{id}}/snapshot.jpg?bbox=1
+    inline_keyboard: >-
+      {% set buttons = [] %}
+      {% if base_url %}
+        {% set buttons = buttons + [{"text": "🏠 Home Assistant", "url": base_url}] %}
+      {% endif %}
+      {% if frigate_url %}
+        {% set buttons = buttons + [{"text": "📹 Frigate", "url": frigate_url ~ "/cameras/" ~ camera}] %}
+      {% endif %}
+      {% if buttons|length > 0 %}
+        {{ [buttons] }}
+      {% endif %}
 - repeat:
     sequence:
     - wait_for_trigger:
@@ -172,3 +223,5 @@ action:
         url: >-
           {{base_url}}/api/frigate/notifications/{{id}}/{{camera}}/clip.mp4
     until: '{{ wait.trigger.payload_json[''type''] == ''end'' }}'
+- choose: []
+  default: !input 'post_event_action'
