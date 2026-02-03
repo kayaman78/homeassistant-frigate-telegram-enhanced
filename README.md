@@ -39,7 +39,7 @@ Home Assistant Blueprint for sending feature-rich Telegram notifications from Fr
 
 **Required:**
 - Home Assistant 2024+
-- Frigate 0.17+ integrated in Home Assistant
+- Frigate 0.15+ integrated in Home Assistant
 - Configured Telegram Bot
 
 **Optional (for specific features):**
