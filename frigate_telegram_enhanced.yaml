@@ -190,16 +190,15 @@ action:
     url: >-
       {{base_url}}/api/frigate/notifications/{{id}}/snapshot.jpg?bbox=1
     inline_keyboard: >-
-      {% set buttons = [] %}
-      {% if base_url %}
-        {% set buttons = buttons + [{"text": "🏠 Home Assistant", "url": base_url}] %}
+      {% set keyboard = [] %}
+      {% if base_url and frigate_url %}
+        {% set keyboard = ['🏠 Home Assistant:' ~ base_url ~ ', 📹 Frigate:' ~ frigate_url ~ '/cameras/' ~ camera] %}
+      {% elif base_url %}
+        {% set keyboard = ['🏠 Home Assistant:' ~ base_url] %}
+      {% elif frigate_url %}
+        {% set keyboard = ['📹 Frigate:' ~ frigate_url ~ '/cameras/' ~ camera] %}
       {% endif %}
-      {% if frigate_url %}
-        {% set buttons = buttons + [{"text": "📹 Frigate", "url": frigate_url ~ "/cameras/" ~ camera}] %}
-      {% endif %}
-      {% if buttons|length > 0 %}
-        {{ [buttons] }}
-      {% endif %}
+      {{ keyboard }}
 - repeat:
     sequence:
     - wait_for_trigger:
