@@ -1,5 +1,3 @@
-https://github.com/kayaman78/homeassistant-frigate-telegram-enhanced/blob/main/frigate_telegram_enhanced.yaml
-
 # Frigate Telegram Notification Blueprint
 
 > **Version 1.0** - Advanced Telegram notifications for Frigate with smart modes, buttons, and post-event actions
