@@ -24,13 +24,15 @@ blueprint:
       default: 'false'
     base_url:
       name: (Optional) Base URL
-      description: The external url for your Home Assistant instance. This will default
-        to a relative URL and will open the clips in the app instead of the browser,
-        which may cause issues on some devices.
+      description: 'EXTERNAL HTTPS URL for your Home Assistant instance (e.g., https://ha.yourdomain.com).
+                WARNING: Use only external HTTPS URLs, NOT internal IPs. Internal URLs will not work from Telegram.
+                This URL is used for clip/snapshot access and optional button. Leave empty to use relative URLs.'
       default: ''
     frigate_url:
-      name: (Optional) Frigate URL
-      description: The external URL for your Frigate instance (e.g., https://frigate.yourdomain.com). If provided, adds a button to open Frigate camera view.
+      name: (Optional) Frigate URL  
+      description: 'EXTERNAL HTTPS URL for your Frigate instance (e.g., https://frigate.yourdomain.com). 
+                WARNING: Use only external HTTPS URLs, NOT internal IPs. Internal URLs will not work from Telegram.
+                Leave empty if you do not have external access to Frigate configured.'
       default: ''
     zone_filter:
       name: (Optional) Zone Filter
