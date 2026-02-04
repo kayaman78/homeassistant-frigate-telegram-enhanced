@@ -108,6 +108,8 @@ variables:
   camera_name: '{{ camera | replace(''_'', '' '') | title }}'
   target_chat: !input 'target_chat'
   review_data: '{{ trigger.payload_json[''after''][''data''] }}'
+  detections: '{{ review_data.detections }}'
+  event_id: '{{ detections[0] if detections|length > 0 else id }}'
   objects: '{{ review_data.objects }}'
   primary_object: '{{ objects[0] if objects|length > 0 else "motion" }}'
   label: '{{ primary_object | title }}'
@@ -181,7 +183,7 @@ action:
       {{ emoji }} {{ object_label }}
       📹 {{ camera_name }}
       🕐 {{ now().strftime('%H:%M:%S') }}
-    url: '{{base_url}}/api/frigate/notifications/{{id}}/thumbnail.jpg'
+    url: '{{base_url}}/api/frigate/notifications/{{event_id}}/thumbnail.jpg'
 - service: telegram_bot.send_video
   data:
     target: '{{ target_chat }}'
@@ -190,6 +192,6 @@ action:
     caption: |
       📹 {{ camera_name }} - Event Recording
       🕐 {{ now().strftime('%H:%M:%S') }}
-    url: '{{base_url}}/api/frigate/notifications/{{id}}/clip.mp4'
+    url: '{{base_url}}/api/frigate/notifications/{{event_id}}/clip.mp4'
 - choose: []
   default: !input 'post_event_action'
