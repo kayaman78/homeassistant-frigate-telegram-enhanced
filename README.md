@@ -8,10 +8,9 @@ Home Assistant Blueprint for sending feature-rich Telegram notifications from Fr
 
 ### 📱 Rich Notifications
 - **Snapshot with bounding boxes** - Detection boxes around objects
-- **Event video** - Complete recording quoted to the snapshot (threaded messages)
+- **Event video** - Complete recording
 - **Custom emojis** - 👤 Person, 🚗 Car, 🚨 Motion
 - **Timestamps** - Time display on both messages
-- **Interactive buttons** - Quick access to Home Assistant and Frigate
 
 ### 🌓 Smart Notification Modes (7 modes)
 - **Disabled** - No notifications
@@ -144,7 +143,7 @@ Or click: [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_imp
 [🏠 Home Assistant] [📹 Frigate]  ← buttons (if configured)
 ```
 
-### Message 2 (Video - quoted reply)
+### Message 2 (Video)
 ```
   ↳ 📹 Front Door - Event Recording
     🕐 14:30:28
@@ -191,11 +190,6 @@ post_event_action:
 ### Multi-person presence
 Select multiple person entities in "Presence Filter" - notifications are sent only when **ALL** are away.
 
-### Interactive buttons
-- Set `base_url` to your external HA URL → adds "Home Assistant" button
-- Set `frigate_url` to your Frigate URL → adds "Frigate" button  
-- Both optional, buttons appear only if URLs are configured
-
 ### Workday sensor customization
 ```yaml
 binary_sensor:
@@ -237,10 +231,6 @@ Want more? Edit the `emoji` template in the blueprint!
 - Verify workday sensor exists: `binary_sensor.workday_sensor`
 - Check sensor state in Developer Tools → States
 
-**Buttons not appearing?**
-- Verify `base_url` and/or `frigate_url` are filled in
-- URLs must be complete (including https://)
-
 **Presence not working?**
 - Ensure person entities are properly configured
 - Check entity states in Developer Tools → States
@@ -251,7 +241,7 @@ MIT License - Free to use, modify, and distribute
 
 ## 🙏 Credits
 
-Enhanced and maintained by the community. Originally based on NdR91's Frigate notification blueprint. (grazie mille!!!)
+Enhanced and maintained by the community. Originally based on NdR91's Frigate notification blueprint.
 
 ## 📌 Version
 
