@@ -1,6 +1,6 @@
 blueprint:
   name: Frigate - Telegram Notification Enhanced v1.0
-  description: Create automations to receive Snapshots and Clips from Frigate
+  description: Create automations to receive Snapshots and Clips from Frigate using the Reviews API (Frigate 0.15+)
   domain: automation
   input:
     camera:
@@ -23,15 +23,8 @@ blueprint:
           - 'false'
       default: 'false'
     base_url:
-      name: (Optional) Base URL
-      description: The external url for your Home Assistant instance. This will default
-        to a relative URL and will open the clips in the app instead of the browser,
-        which may cause issues on some devices.
-      default: ''
-    frigate_url:
-      name: (Optional) Frigate URL
-      description: The external URL for your Frigate instance (e.g., https://frigate.yourdomain.com). If provided, adds a button to open Frigate camera view.
-      default: ''
+      name: Base URL
+      description: The external url for your Home Assistant instance (required for Telegram to fetch media). Example - http://192.168.1.10:8123 or https://yourdomain.com
     zone_filter:
       name: (Optional) Zone Filter
       description: Only notify if object has entered a defined zone.
@@ -106,7 +99,7 @@ mode: single
 max_exceeded: silent
 trigger:
   platform: mqtt
-  topic: frigate/events
+  topic: frigate/reviews
   payload: !input 'camera'
   value_template: '{{ value_json[''after''][''camera''] }}'
 variables:
@@ -114,12 +107,13 @@ variables:
   camera: '{{ trigger.payload_json[''after''][''camera''] }}'
   camera_name: '{{ camera | replace(''_'', '' '') | title }}'
   target_chat: !input 'target_chat'
-  object: '{{ trigger.payload_json[''after''][''label''] }}'
-  label: '{{ object | title }}'
-  entered_zones: '{{ trigger.payload_json[''after''][''entered_zones''] }}'
+  review_data: '{{ trigger.payload_json[''after''][''data''] }}'
+  objects: '{{ review_data.objects }}'
+  primary_object: '{{ objects[0] if objects|length > 0 else "motion" }}'
+  label: '{{ primary_object | title }}'
+  entered_zones: '{{ review_data.zones | default([]) }}'
   type: '{{ trigger.payload_json[''type''] }}'
   base_url: !input 'base_url'
-  frigate_url: !input 'frigate_url'
   zone_only: !input 'zone_filter'
   input_zones: !input 'zones'
   zones: '{{ input_zones | list }}'
@@ -147,17 +141,17 @@ variables:
       {{ is_workday and work_start <= current_time < work_end }}
     {% endif %}
   emoji: >-
-    {% if object == 'person' %}
+    {% if primary_object == 'person' %}
       👤
-    {% elif object == 'car' %}
+    {% elif primary_object == 'car' %}
       🚗
     {% else %}
       🚨
     {% endif %}
   object_label: >-
-    {% if object == 'person' %}
+    {% if primary_object == 'person' %}
       Person detected
-    {% elif object == 'car' %}
+    {% elif primary_object == 'car' %}
       Car detected
     {% else %}
       Motion detected
@@ -166,7 +160,7 @@ condition:
 - '{{ type != ''end'' }}'
 - '{{ not zone_only or entered_zones|length > 0 }}'
 - '{{ not zones|length or zones|select(''in'', entered_zones)|list|length > 0 }}'
-- '{{ not labels|length or object in labels }}'
+- '{{ not labels|length or primary_object in labels }}'
 - >-
   {{
     notification_mode == 'always_active' or
@@ -187,38 +181,25 @@ action:
       {{ emoji }} {{ object_label }}
       📹 {{ camera_name }}
       🕐 {{ now().strftime('%H:%M:%S') }}
-    url: >-
-      {% if base_url %}
-        {{base_url}}/api/frigate/notifications/{{id}}/snapshot.jpg?bbox=1
-      {% else %}
-        {{ states.sensor.external_url.state if states.sensor.external_url else 'http://' + states('sensor.local_ip') + ':8123' }}/api/frigate/notifications/{{id}}/snapshot.jpg?bbox=1
-      {% endif %}
-- repeat:
-    sequence:
-    - wait_for_trigger:
-      - platform: mqtt
-        topic: frigate/events
-        payload: '{{ id }}'
-        value_template: '{{ value_json[''after''][''id''] }}'
-      timeout:
-        minutes: 2
-      continue_on_timeout: false
-    - condition: template
-      value_template: '{{ wait.trigger.payload_json[''type''] == ''end'' }}'
-    - service: telegram_bot.send_video
-      data:
-        target: '{{ target_chat }}'
-        disable_notification: '{{ notification }}'
-        reply_to_message_id: '{{ first_message.chats[0].message_id }}'
-        caption: |
-          📹 {{ camera_name }} - Event Recording
-          🕐 {{ now().strftime('%H:%M:%S') }}
-        url: >-
-          {% if base_url %}
-            {{base_url}}/api/frigate/notifications/{{id}}/{{camera}}/clip.mp4
-          {% else %}
-            {{ states.sensor.external_url.state if states.sensor.external_url else 'http://' + states('sensor.local_ip') + ':8123' }}/api/frigate/notifications/{{id}}/{{camera}}/clip.mp4
-          {% endif %}
-    until: '{{ wait.trigger.payload_json[''type''] == ''end'' }}'
+    url: '{{base_url}}/api/frigate/reviews/{{id}}/thumbnail.jpg'
+- wait_for_trigger:
+  - platform: mqtt
+    topic: frigate/reviews
+    payload: '{{ id }}'
+    value_template: '{{ value_json[''after''][''id''] }}'
+  timeout:
+    minutes: 5
+  continue_on_timeout: false
+- condition: template
+  value_template: '{{ wait.trigger.payload_json[''type''] == ''end'' }}'
+- service: telegram_bot.send_video
+  data:
+    target: '{{ target_chat }}'
+    disable_notification: '{{ notification }}'
+    reply_to_message_id: '{{ first_message.chats[0].message_id }}'
+    caption: |
+      📹 {{ camera_name }} - Event Recording
+      🕐 {{ now().strftime('%H:%M:%S') }}
+    url: '{{base_url}}/api/frigate/reviews/{{id}}/video'
 - choose: []
   default: !input 'post_event_action'
