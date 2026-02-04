@@ -157,7 +157,7 @@ variables:
       Motion detected
     {% endif %}
 condition:
-- '{{ type != ''end'' }}'
+- '{{ type == ''end'' }}'
 - '{{ not zone_only or entered_zones|length > 0 }}'
 - '{{ not zones|length or zones|select(''in'', entered_zones)|list|length > 0 }}'
 - '{{ not labels|length or primary_object in labels }}'
@@ -182,16 +182,6 @@ action:
       📹 {{ camera_name }}
       🕐 {{ now().strftime('%H:%M:%S') }}
     url: '{{base_url}}/api/frigate/reviews/{{id}}/thumbnail.jpg'
-- wait_for_trigger:
-  - platform: mqtt
-    topic: frigate/reviews
-    payload: '{{ id }}'
-    value_template: '{{ value_json[''after''][''id''] }}'
-  timeout:
-    minutes: 5
-  continue_on_timeout: false
-- condition: template
-  value_template: '{{ wait.trigger.payload_json[''type''] == ''end'' }}'
 - service: telegram_bot.send_video
   data:
     target: '{{ target_chat }}'
