@@ -98,10 +98,11 @@ blueprint:
 mode: single
 max_exceeded: silent
 trigger:
-  platform: mqtt
-  topic: frigate/reviews
-  payload: !input 'camera'
-  value_template: '{{ value_json[''after''][''camera''] }}'
+  - platform: mqtt
+    topic: frigate/reviews
+    payload: !input 'camera'
+    value_template: '{{ value_json[''after''][''camera''] }}'
+    id: review_event
 variables:
   id: '{{ trigger.payload_json[''after''][''id''] }}'
   camera: '{{ trigger.payload_json[''after''][''camera''] }}'
@@ -159,7 +160,6 @@ variables:
       Motion detected
     {% endif %}
 condition:
-- '{{ type == ''end'' }}'
 - '{{ not zone_only or entered_zones|length > 0 }}'
 - '{{ not zones|length or zones|select(''in'', entered_zones)|list|length > 0 }}'
 - '{{ not labels|length or primary_object in labels }}'
@@ -173,25 +173,33 @@ condition:
     (notification_mode == 'away_and_night' and (not anyone_home or is_night)) or
     (notification_mode == 'after_hours' and not is_business_hours)
   }}
+- '{{ type == "new" or type == "end" }}'
 action:
-- service: telegram_bot.send_photo
-  response_variable: first_message
-  data:
-    target: '{{ target_chat }}'
-    disable_notification: '{{ notification }}'
-    caption: |
-      {{ emoji }} {{ object_label }}
-      📹 {{ camera_name }}
-      🕐 {{ now().strftime('%H:%M:%S') }}
-    url: '{{base_url}}/api/frigate/notifications/{{event_id}}/thumbnail.jpg'
-- service: telegram_bot.send_video
-  data:
-    target: '{{ target_chat }}'
-    disable_notification: '{{ notification }}'
-    reply_to_message_id: '{{ first_message.chats[0].message_id }}'
-    caption: |
-      📹 {{ camera_name }} - Event Recording
-      🕐 {{ now().strftime('%H:%M:%S') }}
-    url: '{{base_url}}/api/frigate/notifications/{{event_id}}/clip.mp4'
-- choose: []
-  default: !input 'post_event_action'
+- choose:
+  - conditions:
+    - condition: template
+      value_template: '{{ type == "new" }}'
+    sequence:
+    - service: telegram_bot.send_photo
+      data:
+        target: '{{ target_chat }}'
+        disable_notification: '{{ notification }}'
+        caption: |
+          {{ emoji }} {{ object_label }}
+          📹 {{ camera_name }}
+          🕐 {{ now().strftime('%H:%M:%S') }}
+        url: '{{base_url}}/api/frigate/notifications/{{event_id}}/thumbnail.jpg'
+  - conditions:
+    - condition: template
+      value_template: '{{ type == "end" }}'
+    sequence:
+    - service: telegram_bot.send_video
+      data:
+        target: '{{ target_chat }}'
+        disable_notification: '{{ notification }}'
+        caption: |
+          📹 {{ camera_name }} - Event Recording
+          🕐 {{ now().strftime('%H:%M:%S') }}
+        url: '{{base_url}}/api/frigate/notifications/{{event_id}}/clip.mp4'
+    - choose: []
+      default: !input 'post_event_action'
