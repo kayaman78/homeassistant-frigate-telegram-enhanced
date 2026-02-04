@@ -181,7 +181,7 @@ action:
       {{ emoji }} {{ object_label }}
       📹 {{ camera_name }}
       🕐 {{ now().strftime('%H:%M:%S') }}
-    url: '{{base_url}}/api/frigate/reviews/{{id}}/thumbnail.jpg'
+    url: '{{base_url}}/api/frigate/notifications/{{id}}/thumbnail.jpg'
 - service: telegram_bot.send_video
   data:
     target: '{{ target_chat }}'
@@ -190,6 +190,6 @@ action:
     caption: |
       📹 {{ camera_name }} - Event Recording
       🕐 {{ now().strftime('%H:%M:%S') }}
-    url: '{{base_url}}/api/frigate/reviews/{{id}}/video'
+    url: '{{base_url}}/api/frigate/notifications/{{id}}/clip.mp4'
 - choose: []
   default: !input 'post_event_action'
