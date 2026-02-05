@@ -1,6 +1,6 @@
 # Frigate Telegram Notification Blueprint
 
-> **Version 1.0** - Advanced Telegram notifications for Frigate with smart modes, buttons, and post-event actions
+> **Version 1.0** - Advanced Telegram notifications for Frigate with smart modes, and post-event actions
 
 Home Assistant Blueprint for sending feature-rich Telegram notifications from Frigate events.
 
@@ -30,7 +30,7 @@ Home Assistant Blueprint for sending feature-rich Telegram notifications from Fr
 ### 🔧 Automation & Actions
 - **Post-event actions** - Trigger lights, alarms, or any Home Assistant action
 - **Customizable work hours** - Define your business schedule
-- **Optional buttons** - Links to Home Assistant and Frigate interfaces
+- **Send only screenshot** - Toggle to send only screenshot
 
 ## 📥 Installation
 
@@ -77,6 +77,7 @@ Or click: [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_imp
 - **Frigate Camera**: camera name from Frigate config (e.g., `front_door`)
 - **Target**: your Telegram `chat_id`
 - **Notification Mode**: select your preferred mode
+- **Base URL**: your local Home Assistant address (e.g., http://192.168.1.10:8123) remembre to remove final / on address
 
 ## ⚙️ Configuration
 
@@ -90,8 +91,6 @@ Or click: [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_imp
 ### Optional Parameters
 | Parameter | Description | Used by mode |
 |-----------|-------------|--------------|
-| **Base URL** | External Home Assistant URL | Button generation |
-| **Frigate URL** | External Frigate URL | Button generation |
 | **Zone Filter** | Enable zone-based filtering | All modes |
 | **Trigger Zones** | List of zones to monitor | When zone filter enabled |
 | **Trigger Objects** | List of objects (person, car, etc.) | All modes |
