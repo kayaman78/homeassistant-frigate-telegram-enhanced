@@ -1,5 +1,10 @@
-blueprint:
-  name: Frigate - Telegram Notification Enhanced v1.0
+- conditions:
+    - condition: template
+      value_template: '{{ type == "end" and not video_enabled }}'
+    sequence:
+    - choose: []
+      default: !input 'post_event_action'blueprint:
+  name: Frigate - Telegram Notification
   description: Create automations to receive Snapshots and Clips from Frigate using the Reviews API (Frigate 0.15+)
   domain: automation
   input:
@@ -95,6 +100,12 @@ blueprint:
       default: []
       selector:
         action: {}
+    send_video:
+      name: Send Video
+      description: Send video clip when event ends. Disable if you only want snapshot notifications.
+      default: true
+      selector:
+        boolean: {}
 mode: single
 max_exceeded: silent
 trigger:
@@ -143,6 +154,7 @@ variables:
     {% else %}
       {{ is_workday and work_start <= current_time < work_end }}
     {% endif %}
+  video_enabled: !input 'send_video'
   emoji: >-
     {% if primary_object == 'person' %}
       👤
@@ -188,10 +200,10 @@ action:
           {{ emoji }} {{ object_label }}
           📹 {{ camera_name }}
           🕐 {{ now().strftime('%H:%M:%S') }}
-        url: '{{base_url}}/api/frigate/notifications/{{event_id}}/thumbnail.jpg'
+        url: '{{base_url}}/api/frigate/notifications/{{event_id}}/snapshot.jpg?bbox=1'
   - conditions:
     - condition: template
-      value_template: '{{ type == "end" }}'
+      value_template: '{{ type == "end" and video_enabled }}'
     sequence:
     - service: telegram_bot.send_video
       data:
