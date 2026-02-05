@@ -139,7 +139,6 @@ Or click: [![Import Blueprint](https://my.home-assistant.io/badges/blueprint_imp
 📹 Front Door
 🕐 14:30:15
 [photo with bounding box]
-[🏠 Home Assistant] [📹 Frigate]  ← buttons (if configured)
 ```
 
 ### Message 2 (Video)
@@ -240,7 +239,7 @@ MIT License - Free to use, modify, and distribute
 
 ## 🙏 Credits
 
-Enhanced and maintained by the community. Originally based on NdR91's Frigate notification blueprint.
+Originally based on NdR91's Frigate notification blueprint (grazie mille!!!)
 
 ## 📌 Version
 
