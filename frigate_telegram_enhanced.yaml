@@ -1,9 +1,4 @@
-- conditions:
-    - condition: template
-      value_template: '{{ type == "end" and not video_enabled }}'
-    sequence:
-    - choose: []
-      default: !input 'post_event_action'blueprint:
+blueprint:
   name: Frigate - Telegram Notification v1.0
   description: Create automations to receive Snapshots and Clips from Frigate using the Reviews API (Frigate 0.15+)
   domain: automation
@@ -30,6 +25,18 @@
     base_url:
       name: Base URL
       description: The external url for your Home Assistant instance (required for Telegram to fetch media). Example - http://192.168.1.10:8123 or https://yourdomain.com
+    show_bboxes:
+      name: (Optional) Show Bounding Boxes
+      description: Display bounding boxes around detected objects in snapshots
+      default: true
+      selector:
+        boolean: {}
+    send_video:
+      name: (Optional) Send Video
+      description: Send video clip when event ends. If disabled, only snapshots will be sent.
+      default: true
+      selector:
+        boolean: {}
     zone_filter:
       name: (Optional) Zone Filter
       description: Only notify if object has entered a defined zone.
@@ -100,12 +107,6 @@
       default: []
       selector:
         action: {}
-    send_video:
-      name: Send Video
-      description: Send video clip when event ends. Disable if you only want snapshot notifications.
-      default: true
-      selector:
-        boolean: {}
 mode: single
 max_exceeded: silent
 trigger:
@@ -128,6 +129,8 @@ variables:
   entered_zones: '{{ review_data.zones | default([]) }}'
   type: '{{ trigger.payload_json[''type''] }}'
   base_url: !input 'base_url'
+  show_bboxes: !input 'show_bboxes'
+  send_video: !input 'send_video'
   zone_only: !input 'zone_filter'
   input_zones: !input 'zones'
   zones: '{{ input_zones | list }}'
@@ -154,7 +157,7 @@ variables:
     {% else %}
       {{ is_workday and work_start <= current_time < work_end }}
     {% endif %}
-  video_enabled: !input 'send_video'
+  bbox_param: '{{ "?bbox=1" if show_bboxes else "" }}'
   emoji: >-
     {% if primary_object == 'person' %}
       👤
@@ -200,10 +203,10 @@ action:
           {{ emoji }} {{ object_label }}
           📹 {{ camera_name }}
           🕐 {{ now().strftime('%H:%M:%S') }}
-        url: '{{base_url}}/api/frigate/notifications/{{event_id}}/snapshot.jpg?bbox=1'
+        url: '{{base_url}}/api/frigate/notifications/{{event_id}}/snapshot.jpg{{bbox_param}}'
   - conditions:
     - condition: template
-      value_template: '{{ type == "end" and video_enabled }}'
+      value_template: '{{ type == "end" and send_video }}'
     sequence:
     - service: telegram_bot.send_video
       data:
@@ -213,5 +216,11 @@ action:
           📹 {{ camera_name }} - Event Recording
           🕐 {{ now().strftime('%H:%M:%S') }}
         url: '{{base_url}}/api/frigate/notifications/{{event_id}}/clip.mp4'
+    - choose: []
+      default: !input 'post_event_action'
+  - conditions:
+    - condition: template
+      value_template: '{{ type == "end" and not send_video }}'
+    sequence:
     - choose: []
       default: !input 'post_event_action'
