@@ -4,7 +4,7 @@
     sequence:
     - choose: []
       default: !input 'post_event_action'blueprint:
-  name: Frigate - Telegram Notification
+  name: Frigate - Telegram Notification v1.0
   description: Create automations to receive Snapshots and Clips from Frigate using the Reviews API (Frigate 0.15+)
   domain: automation
   input:
