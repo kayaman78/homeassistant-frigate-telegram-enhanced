@@ -1,6 +1,6 @@
 # Frigate Telegram Notification Blueprint
 
-> **Version 1.0** - Advanced Telegram notifications for Frigate with smart modes, and post-event actions
+> **Version 1.0** - Advanced Telegram notifications for Frigate with smart modes, and post-event actions with simple config
 
 Home Assistant Blueprint for sending feature-rich Telegram notifications from Frigate events.
 
